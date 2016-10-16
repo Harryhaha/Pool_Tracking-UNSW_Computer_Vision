@@ -9,7 +9,7 @@ import time
 start_time = time.time()
 
 filename_topview = 'test_data/pool_topview/topview1.gif'
-filename_sideview = 'test_data/cctv_pool_game1/1.png'
+filename_sideview = 'test_data/game1/1.png'
 
 field_corners = np.empty([4, 2], dtype="float32")  # order: Left-Down, Left-Top, Right-Top, Right-Down
 field_counter = 0
@@ -51,6 +51,7 @@ def auto_pool_table_detection():
     # cv2.imshow("maskedEffect", np.hstack([image, output]))
     cv2.imshow("maskedEffect", output)
     cv2.imshow("Mask", mask)
+    cv2.imwrite("1.jpg",mask)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -81,6 +82,7 @@ def auto_pool_table_detection():
 
     # Show keypoints
     cv2.imshow("Keypoints", im_with_keypoints)
+    cv2.imwrite("2.jpg",im_with_keypoints)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
     #=======================/Detect blobs==============
@@ -97,6 +99,7 @@ def auto_pool_table_detection():
 
     cv2.drawContours(output, [hull], -1, (0, 255, 0), 2)
     cv2.imshow("table hull", output)
+    cv2.imwrite("3.jpg",output)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
@@ -113,6 +116,7 @@ def auto_pool_table_detection():
     test_img = np.zeros((height, width, 1), np.uint8)
     cv2.drawContours(test_img, [test], -1, 255, -1)  # thickness negative -> fill; positive means thick
     cv2.imshow("appox", test_img)
+    cv2.imwrite("4.jpg",test_img)
 
     points = test.tolist()
     # print(points)
@@ -157,6 +161,7 @@ def auto_pool_table_detection():
     print(field_corners)
 
     cv2.imshow("appox1", side_image)
+    cv2.imwrite("5.jpg",side_image)
 
     cv2.waitKey(0)
     cv2.destroyAllWindows()
@@ -314,6 +319,10 @@ if __name__ == '__main__':
 
     # display
     cv2.imshow('Side-View', side_image)
+    cv2.imwrite("video_points.jpg",side_image)
+
     cv2.imshow('Top-View', top_image)
+    cv2.imwrite("2D_points.jpg",top_image)
+
     cv2.waitKey(0)
     cv2.destroyAllWindows()

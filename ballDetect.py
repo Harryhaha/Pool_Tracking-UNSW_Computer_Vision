@@ -70,11 +70,14 @@ def detect_ball_via_color_mask(img_path):
 
 	# define the list of boundaries
 	boundaries = [
-		([10, 50, 0], [50, 100, 255]),  # cue
+		# ([10, 50, 0], [50, 100, 255]),  # cue
 		# ([20, 100, 0], [40, 255, 255]),  # ball1
 		# ([0, 0, 0], [255, 255, 50])  # ball8
-		([2, 182, 170], [6, 222, 255]),  # ball13 primary_hue=4
-		([0, 0, 150], [10, 200, 255])  # ball14 primary_hue=8
+		# ([2, 182, 170], [6, 222, 255]),  # ball13 primary_hue=4
+		# ([0, 0, 150], [10, 200, 255])  # ball14 primary_hue=8
+		# ([0, 0, 100], [50, 100, 255])  # ball0 primary_hue=25
+		# ([50, 150, 20], [100, 255, 60]) # ball6 primary_hue=82
+		([5, 170, 170], [20, 255, 255]) # ball6 primary_hue=82
 	]
 
 	# loop over the boundaries
@@ -110,12 +113,12 @@ def detect_ball_via_color_mask(img_path):
 			
 			image_copy = image.copy()
 			
-			''' we can find max match!!!
+			# we can find max match!!!
 			# find the largest contour in the mask, then use
 			# it to compute the minimum enclosing circle and
 			# centroid
-			c = max(cnts, key=cv2.contourArea)
-			'''
+			# c = max(cnts, key=cv2.contourArea)
+			
 
 			for c in cnts:
 				((x, y), radius) = cv2.minEnclosingCircle(c)
