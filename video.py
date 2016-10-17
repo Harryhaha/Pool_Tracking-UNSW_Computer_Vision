@@ -176,6 +176,7 @@ class VideoBall:
         if data:
             self.hsv_color_lower = data["hsv_color_lower"]
             self.hsv_color_upper = data["hsv_color_upper"]
+            self.trajectory_color = data["trajectory_color"]
 
 
 class Video:
@@ -370,8 +371,8 @@ class Video:
             for i in range(len(one_ball_rec) - 1):
                 # print(one_ball_rec[i], one_ball_rec[i+1])
 
-                cv2.circle(img, one_ball_rec[i], 3, config.sim_ball_data[ball_id]["ball_color"], -1)
-                cv2.line(img, one_ball_rec[i], one_ball_rec[i+1], config.sim_ball_data[ball_id]["ball_color"], 1)
+                cv2.circle(img, one_ball_rec[i], 3, self.balls[ball_id].trajectory_color, -1)
+                cv2.line(img, one_ball_rec[i], one_ball_rec[i+1], self.balls[ball_id].trajectory_color, 1)
 
         # print("hello")
         cv2.imshow("draw_simple_trajectory", img)
