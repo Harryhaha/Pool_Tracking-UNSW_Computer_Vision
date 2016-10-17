@@ -309,7 +309,7 @@ class Video:
             """
             if is_draw:
                 # cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 0), 2)
-                cv2.circle(frame, ball_center, 4, (255, 255, 255), 2)
+                cv2.circle(frame, ball_center, 10, (0, 0, 255), 2)
 
                 # trajectory
                 tmp_ball_record = self.ball_tracking_rec_for_real_time[ball_id]
