@@ -19,7 +19,7 @@ class VideoTable:
         self.hsv_color_lower = np.array([95, 100, 0], dtype="uint8")
         self.hsv_color_upper = np.array([105, 255, 255], dtype="uint8")
 
-        self.field_corners = np.empty([4, 2], dtype="float32")  # order: Left-Down, Left-Top, Right-Top, Right-Down
+        self.table_corners = np.empty([4, 2], dtype="float32")  # order: Left-Down, Left-Top, Right-Top, Right-Down
         self.click_count = 0
 
         if auto_find_corner:
@@ -33,17 +33,13 @@ class VideoTable:
         # if event == cv2.EVENT_LBUTTONDOWN:
         if event == cv2.EVENT_LBUTTONDBLCLK:
             if self.click_count < 4:
-                self.field_corners[self.click_count, :] = [int(x), int(y)]
+                self.table_corners[self.click_count, :] = [int(x), int(y)]
                 print(x, y)
                 self.click_count += 1
             else:
                 print("please close image window")
 
     def manual_table_corner_detection(self):
-
-        field_corners = np.empty([4, 2], dtype="float32")
-        field_counter = 0
-
         side_image = cv2.imread(self.table_img_path)
 
         print("Please select four corners from the pool table!")
@@ -54,121 +50,121 @@ class VideoTable:
         cv2.destroyAllWindows()
 
 
-        # todo: auto table corner detection
-        # def auto_pool_table_detection():
-        #     side_image = cv2.imread(filename_sideview)
-        #     side_image = cv2.medianBlur(side_image, 5)
-        #
-        #     height, width, channels = side_image.shape
-        #
-        #     # image = cv2.medianBlur(image,3)
-        #     hsv_image = cv2.cvtColor(side_image, cv2.COLOR_BGR2HSV)
-        #
-        #     # define the color range
-        #     lower = np.array([95, 100, 0], dtype="uint8")
-        #     upper = np.array([105, 255, 255], dtype="uint8")
-        #
-        #     mask = cv2.inRange(hsv_image, lower, upper)
-        #
-        #     # show the masked output
-        #     output = cv2.bitwise_and(side_image, side_image, mask=mask)
-        #     # cv2.imshow("maskedEffect", np.hstack([image, output]))
-        #     # cv2.imshow("maskedEffect", output)
-        #     # cv2.imshow("Mask", mask)
-        #
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
-        #
-        #     # Set up the detector with default parameters.
-        #
-        #     # Setup SimpleBlobDetector parameters.
-        #     params = cv2.SimpleBlobDetector_Params()
-        #     # Filter by Convexity
-        #     params.filterByConvexity = True
-        #     params.minConvexity = 0.2
-        #
-        #     detector = cv2.SimpleBlobDetector_create(params)
-        #
-        #     # Detect blobs.
-        #     keypoints = detector.detect(output)
-        #
-        #     # Draw detected blobs as red circles.
-        #     # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
-        #     # im_with_keypoints = cv2.drawKeypoints(output, keypoints, np.array([]), (0, 0, 255),
-        #     #                                       cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
-        #
-        #     # draw convexHull
-        #     contours = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
-        #
-        #     table_contours = max(contours, key=cv2.contourArea)
-        #     hull = cv2.convexHull(table_contours)
-        #     # print(hull)
-        #
-        #     # cv2.drawContours(output, [hull], -1, (0, 255, 0), 2)
-        #     # cv2.imshow("table hull", output)
-        #     # cv2.waitKey(0)
-        #     # cv2.destroyAllWindows()
-        #
-        #     # pure_table_contours_image = np.zeros((height, width, 1), np.uint8)
-        #     # cv2.drawContours(pure_table_contours_image, [hull], -1, 255, -1)  # thickness negative -> fill; positive means thick
-        #     # cv2.imshow("hull", pure_table_contours_image)
-        #     # cv2.waitKey(0)
-        #     # cv2.destroyAllWindows()
-        #
-        #     '''Find Corner of Table'''
-        #     test = cv2.approxPolyDP(hull, epsilon=40, closed=True)
-        #     # print(test)
-        #
-        #     test_img = np.zeros((height, width, 1), np.uint8)
-        #     cv2.drawContours(test_img, [test], -1, 255, -1)  # thickness negative -> fill; positive means thick
-        #     cv2.imshow("appox", test_img)
-        #
-        #     points = test.tolist()
-        #     # print(points)
-        #     tmp_corner_points = []
-        #     for p in points:
-        #         print(p)
-        #         x, y = p[0]
-        #         cv2.circle(side_image, (x, y), 5, (0, 0, 255), -1)
-        #
-        #         tmp_corner_points.append((x, y))
-        #
-        #     print(tmp_corner_points)
-        #
-        #     # odered from p0-3
-        #     # determine which point is on left-up (near 0,0)
-        #     min_distance = float("inf")
-        #     tmp_p1 = None
-        #     for p in tmp_corner_points:
-        #         x, y = p
-        #         distance = ((x - 0) ^ 2 + (y - 0) ^ 2)
-        #         if distance < min_distance:
-        #             min_distance = distance
-        #             tmp_p1 = [x, y]
-        #
-        #     field_corners[1, :] = tmp_p1
-        #
-        #     for p in tmp_corner_points:
-        #         if tmp_p1[0] == p[0] and tmp_p1[1] == p[1]:
-        #             continue
-        #
-        #         if p[0] - tmp_p1[0] > 200 and p[1] - tmp_p1[1] > 200:
-        #             print("3:" + str(p))
-        #             field_corners[3, :] = p
-        #         elif p[0] - tmp_p1[0] > 200:
-        #             print("2:" + str(p))
-        #             field_corners[2, :] = p
-        #         else:
-        #             print("0:" + str(p))
-        #             field_corners[0, :] = p
-        #
-        #     print("auto corner:")
-        #     print(field_corners)
-        #
-        #     cv2.imshow("appox1", side_image)
-        #
-        #     cv2.waitKey(0)
-        #     cv2.destroyAllWindows()
+    # todo: auto table corner detection
+    # def auto_pool_table_detection():
+    #     side_image = cv2.imread(filename_sideview)
+    #     side_image = cv2.medianBlur(side_image, 5)
+    #
+    #     height, width, channels = side_image.shape
+    #
+    #     # image = cv2.medianBlur(image,3)
+    #     hsv_image = cv2.cvtColor(side_image, cv2.COLOR_BGR2HSV)
+    #
+    #     # define the color range
+    #     lower = np.array([95, 100, 0], dtype="uint8")
+    #     upper = np.array([105, 255, 255], dtype="uint8")
+    #
+    #     mask = cv2.inRange(hsv_image, lower, upper)
+    #
+    #     # show the masked output
+    #     output = cv2.bitwise_and(side_image, side_image, mask=mask)
+    #     # cv2.imshow("maskedEffect", np.hstack([image, output]))
+    #     # cv2.imshow("maskedEffect", output)
+    #     # cv2.imshow("Mask", mask)
+    #
+    #     cv2.waitKey(0)
+    #     cv2.destroyAllWindows()
+    #
+    #     # Set up the detector with default parameters.
+    #
+    #     # Setup SimpleBlobDetector parameters.
+    #     params = cv2.SimpleBlobDetector_Params()
+    #     # Filter by Convexity
+    #     params.filterByConvexity = True
+    #     params.minConvexity = 0.2
+    #
+    #     detector = cv2.SimpleBlobDetector_create(params)
+    #
+    #     # Detect blobs.
+    #     keypoints = detector.detect(output)
+    #
+    #     # Draw detected blobs as red circles.
+    #     # cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS ensures the size of the circle corresponds to the size of blob
+    #     # im_with_keypoints = cv2.drawKeypoints(output, keypoints, np.array([]), (0, 0, 255),
+    #     #                                       cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+    #
+    #     # draw convexHull
+    #     contours = cv2.findContours(mask.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)[-2]
+    #
+    #     table_contours = max(contours, key=cv2.contourArea)
+    #     hull = cv2.convexHull(table_contours)
+    #     # print(hull)
+    #
+    #     # cv2.drawContours(output, [hull], -1, (0, 255, 0), 2)
+    #     # cv2.imshow("table hull", output)
+    #     # cv2.waitKey(0)
+    #     # cv2.destroyAllWindows()
+    #
+    #     # pure_table_contours_image = np.zeros((height, width, 1), np.uint8)
+    #     # cv2.drawContours(pure_table_contours_image, [hull], -1, 255, -1)  # thickness negative -> fill; positive means thick
+    #     # cv2.imshow("hull", pure_table_contours_image)
+    #     # cv2.waitKey(0)
+    #     # cv2.destroyAllWindows()
+    #
+    #     '''Find Corner of Table'''
+    #     test = cv2.approxPolyDP(hull, epsilon=40, closed=True)
+    #     # print(test)
+    #
+    #     test_img = np.zeros((height, width, 1), np.uint8)
+    #     cv2.drawContours(test_img, [test], -1, 255, -1)  # thickness negative -> fill; positive means thick
+    #     cv2.imshow("appox", test_img)
+    #
+    #     points = test.tolist()
+    #     # print(points)
+    #     tmp_corner_points = []
+    #     for p in points:
+    #         print(p)
+    #         x, y = p[0]
+    #         cv2.circle(side_image, (x, y), 5, (0, 0, 255), -1)
+    #
+    #         tmp_corner_points.append((x, y))
+    #
+    #     print(tmp_corner_points)
+    #
+    #     # odered from p0-3
+    #     # determine which point is on left-up (near 0,0)
+    #     min_distance = float("inf")
+    #     tmp_p1 = None
+    #     for p in tmp_corner_points:
+    #         x, y = p
+    #         distance = ((x - 0) ^ 2 + (y - 0) ^ 2)
+    #         if distance < min_distance:
+    #             min_distance = distance
+    #             tmp_p1 = [x, y]
+    #
+    #     field_corners[1, :] = tmp_p1
+    #
+    #     for p in tmp_corner_points:
+    #         if tmp_p1[0] == p[0] and tmp_p1[1] == p[1]:
+    #             continue
+    #
+    #         if p[0] - tmp_p1[0] > 200 and p[1] - tmp_p1[1] > 200:
+    #             print("3:" + str(p))
+    #             field_corners[3, :] = p
+    #         elif p[0] - tmp_p1[0] > 200:
+    #             print("2:" + str(p))
+    #             field_corners[2, :] = p
+    #         else:
+    #             print("0:" + str(p))
+    #             field_corners[0, :] = p
+    #
+    #     print("auto corner:")
+    #     print(field_corners)
+    #
+    #     cv2.imshow("appox1", side_image)
+    #
+    #     cv2.waitKey(0)
+    #     cv2.destroyAllWindows()
 
 
 class VideoBall:
@@ -186,17 +182,30 @@ class Video:
     def __init__(self, video_file):
         self.video_file = video_file
         # self.camera = cv2.VideoCapture(video_file)
+        self.first_frame = None
 
         self.balls = {}
         self.table = None
         self.ball_tracking_rec_for_real_time = defaultdict(deque)  # limited space, tmp
-        self.ball_tracking_rec_for_sim = {}  # unlimited space, for post analysis
+
+        # unlimited space, for post analysis.
+        # {"0":[(111,222),(111,333),None,...], "3":..., ...}
+        self.ball_tracking_rec_for_sim = {}
 
         self.init_table()
         self.init_balls()
 
     def init_table(self):
-        self.table = VideoTable("test_data/check0.png")
+        camera = cv2.VideoCapture(self.video_file)
+        (grabbed, self.first_frame) = camera.read()
+        # cv2.imshow("first frame", self.first_frame)
+        self.first_frame = imutils.resize(self.first_frame, width=800)
+        cv2.imwrite(config.first_frame_save_path, self.first_frame)
+
+        # self.table = VideoTable("test_data/check0.png")
+        self.table = VideoTable(config.first_frame_save_path)
+
+        camera.release()
 
     def init_balls(self):
         for ball_id in config.balls_data:
@@ -346,9 +355,29 @@ class Video:
             key = cv2.waitKey(1) & 0xFF
             # if the 'q' key is pressed, stop the loop
             if key == ord("q"):
+                cv2.destroyAllWindows()
                 break
 
         camera.release()
+
+    def draw_simple_trajectory(self):
+        img = self.first_frame
+
+        for ball_id in self.ball_tracking_rec_for_sim:
+            one_ball_rec = self.ball_tracking_rec_for_sim[ball_id]
+            one_ball_rec = [x for x in one_ball_rec if x is not None]
+
+            for i in range(len(one_ball_rec) - 1):
+                # print(one_ball_rec[i], one_ball_rec[i+1])
+
+                cv2.circle(img, one_ball_rec[i], 3, config.sim_ball_data[ball_id]["ball_color"], -1)
+                cv2.line(img, one_ball_rec[i], one_ball_rec[i+1], config.sim_ball_data[ball_id]["ball_color"], 1)
+
+        # print("hello")
+        cv2.imshow("draw_simple_trajectory", img)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     # video_table = VideoTable("test_data/check0.png")
