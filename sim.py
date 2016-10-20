@@ -62,5 +62,63 @@ class Sim:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+    def animation(self, fps=25):
+        init_img = cv2.imread(self.sim_table.table_img_path)
+        height, width, channels = init_img.shape
+
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        video = cv2.VideoWriter('anim.avi', fourcc=fourcc, fps=fps, frameSize=(height, width))
+
+        frame_index = 0
+        successful_frame_count = 0
+        total_frame_count = len(self.tracking_ball_dic["0"])
+
+        while frame_index < total_frame_count:
+
+            # draw one frame
+            img = init_img.copy()
+
+            for ball_id in self.tracking_ball_dic:
+                try:
+                    ball_position = self.tracking_ball_dic[ball_id][frame_index]
+                    cv2.circle(img, ball_position, 8, self.sim_balls[ball_id].ball_color, -1)
+                    video.write(img)
+
+                    successful_frame_count+=1
+                    # print(successful_frame_count)
+                except:
+                    pass
+
+                cv2.imshow('frame', img)
+                if cv2.waitKey(100) & 0xFF == ord('q'):
+                    break
+
+                frame_index += 1
+
+            # img_title = "animation-frame:" + str(frame_index)
+            # cv2.imshow(img_title, img)
+            # cv2.waitKey(1000)
+            # cv2.destroyAllWindows()
+            # if 0xFF == ord('q'):
+            #     break
+
+
+
+        cv2.destroyAllWindows()
+        video.release()
+
+        # camera = cv2.VideoCapture('anim.avi')
+        #
+        # while True:
+        #     (grabbed, frame) = camera.read()
+        #     if not grabbed:
+        #         break
+        #
+        #     cv2.imshow('animi', frame)
+        #     if cv2.waitKey(1) & 0xFF == ord('q'):
+        #         break
+        #
+        # camera.release()
+        # cv2.destroyAllWindows()
 
 

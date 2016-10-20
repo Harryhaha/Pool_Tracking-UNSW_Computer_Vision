@@ -21,3 +21,5 @@ sim_ball_data = {
 first_frame_save_path = "test_data/first_frame.png"
 
 video_ball_radius = 10
+
+max_move_dis = 100

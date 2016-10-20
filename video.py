@@ -226,6 +226,8 @@ class Video:
         :return: an image object with ROI
         """
 
+        # frame = cv2.GaussianBlur(frame, (11, 11), 0)
+
         image_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
         """
@@ -298,14 +300,15 @@ class Video:
         # cv2.waitKey(0)
 
         """
-        find cnts, then ball center
+        find cnts, then ball center.
+        pick up the nearest-max one to previous ball center
         """
         cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
         if len(cnts) <= 0:
             return None
 
         # print("ball", ball_id, "found!")
-        while len(cnts)>0:
+        while len(cnts) > 0:
             c = max(cnts, key=cv2.contourArea)
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             M = cv2.moments(c)
@@ -315,13 +318,59 @@ class Video:
             one_ball_rec = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
             if len(one_ball_rec) > 0:
                 prev_ball_center = one_ball_rec[0]
-                if imutils.get_distance_of_two_points(ball_center, prev_ball_center) > 200:
+                if imutils.get_distance_of_two_points(ball_center, prev_ball_center) > config.max_move_dis:
                     cnts.remove(c)
                     continue
 
             return ball_center
 
         return None
+
+    def detect_one_ball_from_img_with_roi_v1_simple(self, ball_id, img_with_roi):
+        """
+        use color range to find ball
+        :param ball_id:
+        :param img_with_roi:
+        :return:
+        """
+
+        # print("ball_id", ball_id)
+        img_with_roi_hsv = cv2.cvtColor(img_with_roi, cv2.COLOR_BGR2HSV)
+
+        """
+        apply ball color range on interesting area
+        """
+        ball_color_lower = np.array(self.balls[ball_id].hsv_color_lower, dtype="uint8")
+        ball_color_upper = np.array(self.balls[ball_id].hsv_color_upper, dtype="uint8")
+        mask_range = cv2.inRange(img_with_roi_hsv, ball_color_lower, ball_color_upper)
+        mask_range = cv2.erode(mask_range, None, iterations=2)
+        mask_range = cv2.dilate(mask_range, None, iterations=2)
+
+        # # only display specific ball
+        # image_with_ball = cv2.bitwise_and(img_with_roi, img_with_roi,
+        #                                 mask=mask_range)
+        # cv2.imshow(ball_id, image_with_ball)
+        # cv2.waitKey(0)
+
+        """
+        find cnts, then ball center.
+        pick up the nearest-max one to previous ball center
+        """
+        cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        if len(cnts) <= 0:
+            return None
+
+        # print("ball", ball_id, "found!")
+        c = max(cnts, key=cv2.contourArea)
+        ((x, y), radius) = cv2.minEnclosingCircle(c)
+        M = cv2.moments(c)
+
+        ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+        return ball_center
+
+    def detect_one_ball_by_prev_status(self, ball_id, frame):
+        pass
 
     def real_time_tracking(self):
         camera = cv2.VideoCapture(self.video_file)
@@ -356,6 +405,7 @@ class Video:
             detect each ball using ball color range
             """
             for ball_id in self.balls:
+                # ball_center = self.detect_one_ball_from_img_with_roi_v1_simple(ball_id, img_with_roi)
                 ball_center = self.detect_one_ball_from_img_with_roi(ball_id, img_with_roi)
 
                 if ball_center:
@@ -429,8 +479,8 @@ class Video:
     def test_mean_shift(self):
         camera = cv2.VideoCapture(self.video_file)
 
-        fps = camera.get(cv2.CAP_PROP_FPS)
-        print ("Frames per second using camera.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
+        # fps = camera.get(cv2.CAP_PROP_FPS)
+        # print ("Frames per second using camera.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
 
         frame_count = 0
 
@@ -476,8 +526,10 @@ class Video:
             cv2.imshow('Tracking', frame)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+
         camera.release()
         cv2.destroyAllWindows()
+
 
 if __name__ == '__main__':
     # video_table = VideoTable("test_data/check0.png")
@@ -486,8 +538,12 @@ if __name__ == '__main__':
     video_file = "test_data/game1/video/1.mp4"
 
     myvideo1 = Video(video_file)
+
+    # frame = cv2.imread("extra_files/useful_output/not_found_frame/0_not_found_frame_69.png")
+    # myvideo1.get_img_with_roi(frame)
+
     # myvideo1.real_time_tracking()
-    myvideo1.test_mean_shift()
+    myvideo1.test()
 
 
 
