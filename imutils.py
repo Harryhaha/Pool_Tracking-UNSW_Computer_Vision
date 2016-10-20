@@ -1,7 +1,7 @@
 # Import the necessary packages
 import numpy as np
 import cv2
-
+import math
 
 def translate(image, x, y):
     # Define the translation matrix and perform the translation
@@ -61,10 +61,11 @@ def resize(image, width=None, height=None, inter=cv2.INTER_AREA):
     return resized
 
 
-def create_homography(video_keypoints, sim_keypoints):
+def get_distance_of_two_points(p1,p2):
+    """
 
-    hgcoord_filepath = 'hgmatrix.txt'
-
-    H = cv2.findHomography(video_keypoints, sim_keypoints)[0]
-    np.savetxt(hgcoord_filepath, H)
-    return H
+    :param p1: data format: (x,y)
+    :param p2: data format: (x,y)
+    :return:
+    """
+    return math.hypot(p1[0] - p2[0], p1[1] - p2[1])

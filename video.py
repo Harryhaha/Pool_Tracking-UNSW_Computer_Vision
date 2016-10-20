@@ -298,19 +298,30 @@ class Video:
         # cv2.waitKey(0)
 
         """
-        find cnts
+        find cnts, then ball center
         """
         cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
         if len(cnts) <= 0:
             return None
 
         # print("ball", ball_id, "found!")
-        c = max(cnts, key=cv2.contourArea)
-        ((x, y), radius) = cv2.minEnclosingCircle(c)
-        M = cv2.moments(c)
+        while len(cnts)>0:
+            c = max(cnts, key=cv2.contourArea)
+            ((x, y), radius) = cv2.minEnclosingCircle(c)
+            M = cv2.moments(c)
 
-        ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-        return ball_center
+            ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+
+            one_ball_rec = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
+            if len(one_ball_rec) > 0:
+                prev_ball_center = one_ball_rec[0]
+                if imutils.get_distance_of_two_points(ball_center, prev_ball_center) > 200:
+                    cnts.remove(c)
+                    continue
+
+            return ball_center
+
+        return None
 
     def real_time_tracking(self):
         camera = cv2.VideoCapture(self.video_file)
@@ -354,11 +365,14 @@ class Video:
                     print("ball {} not found on frame {}!".format(ball_id, frame_count))
                     self.ball_tracking_rec_complete[ball_id].append(None)
 
+                    # not_found_file_name = ball_id+"_not_found_frame_"+str(frame_count)+".png"
+                    # cv2.imwrite(not_found_file_name, frame)
+
                 """
                 draw balls and trajectory
                 """
                 # cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 0), 2)
-                cv2.circle(frame, ball_center, 10, (0, 0, 255), 2)
+                cv2.circle(frame, ball_center, config.video_ball_radius, (0, 0, 255), 2)
 
                 # trajectory
                 tmp_ball_record = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
@@ -412,7 +426,7 @@ class Video:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def test_meanshift(self):
+    def test_mean_shift(self):
         camera = cv2.VideoCapture(self.video_file)
 
         fps = camera.get(cv2.CAP_PROP_FPS)
@@ -428,7 +442,7 @@ class Video:
         img_with_roi = self.get_img_with_roi(frame)
         ball_center = self.detect_one_ball_from_img_with_roi("0",img_with_roi)
         print(ball_center)
-        c, r, w, h = ball_center[0]-10, ball_center[1]-10, 20, 20  # rectangle of ball area
+        c, r, w, h = ball_center[0]-5, ball_center[1]-5, 10, 10  # rectangle of ball area
         track_window = (c, r, w, h)
 
         cv2.rectangle(frame, (c, r), (c + w, r + h), 255, 2)
@@ -439,13 +453,14 @@ class Video:
         roi = frame[r:r + h, c:c + w]
         hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-        ball_color_lower = np.array(self.balls["0"].hsv_color_lower, dtype="uint8")
-        ball_color_upper = np.array(self.balls["0"].hsv_color_upper, dtype="uint8")
+        # ball_color_lower = np.array(self.balls["0"].hsv_color_lower, dtype="uint8")
+        # ball_color_upper = np.array(self.balls["0"].hsv_color_upper, dtype="uint8")
+        # mask = cv2.inRange(hsv_roi, ball_color_lower, ball_color_upper)
 
-        mask = cv2.inRange(hsv_roi, ball_color_lower, ball_color_upper)
-        roi_hist = cv2.calcHist([hsv_roi], [0], mask, [255], [0, 255])
+        mask = cv2.inRange(hsv_roi, np.array((0., 60., 32.)), np.array((180., 255., 255.)))
+        roi_hist = cv2.calcHist([hsv_roi], [0], mask, [180], [0, 180])
         cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
-        term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 80, 1)
+        term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 500, 1)
 
         # process each frame
         while True:
@@ -453,7 +468,7 @@ class Video:
             if self.resize:
                 frame = imutils.resize(frame, width=800)
             hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-            dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 255], 1)
+            dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 180], 1)
             ret, track_window = cv2.meanShift(dst, track_window, term_crit)
             x, y, w, h = track_window
             cv2.rectangle(frame, (x, y), (x + w, y + h), 255, 2)
@@ -472,7 +487,7 @@ if __name__ == '__main__':
 
     myvideo1 = Video(video_file)
     # myvideo1.real_time_tracking()
-    myvideo1.test_meanshift()
+    myvideo1.test_mean_shift()
 
 
 
