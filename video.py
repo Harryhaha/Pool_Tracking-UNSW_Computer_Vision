@@ -180,27 +180,32 @@ class VideoBall:
 
 
 class Video:
-    def __init__(self, video_file):
+    def __init__(self, video_file, resize=True):
         self.video_file = video_file
+        self.resize = resize
         # self.camera = cv2.VideoCapture(video_file)
         self.first_frame = None
 
         self.balls = {}
         self.table = None
-        self.ball_tracking_rec_for_real_time = defaultdict(deque)  # limited space, tmp
+        self.tmp_ball_tracking_rec_for_trajectory = defaultdict(deque)  # limited space, tmp
 
         # unlimited space, for post analysis.
         # {"0":[(111,222),(111,333),None,...], "3":..., ...}
-        self.ball_tracking_rec_for_sim = {}
+        self.ball_tracking_rec_complete = {}
 
         self.init_table()
         self.init_balls()
 
     def init_table(self):
         camera = cv2.VideoCapture(self.video_file)
+
+        # use first frame to detect table
         (grabbed, self.first_frame) = camera.read()
         # cv2.imshow("first frame", self.first_frame)
-        self.first_frame = imutils.resize(self.first_frame, width=800)
+        if self.resize:
+            self.first_frame = imutils.resize(self.first_frame, width=800)
+
         cv2.imwrite(config.first_frame_save_path, self.first_frame)
 
         # self.table = VideoTable("test_data/check0.png")
@@ -211,13 +216,15 @@ class Video:
     def init_balls(self):
         for ball_id in config.balls_data:
             self.balls[ball_id] = VideoBall(ball_id, data=config.balls_data[ball_id])
-            self.ball_tracking_rec_for_real_time[ball_id] = deque(maxlen=64)
-            self.ball_tracking_rec_for_sim[ball_id] = []
+            self.tmp_ball_tracking_rec_for_trajectory[ball_id] = deque(maxlen=64)
+            self.ball_tracking_rec_complete[ball_id] = []
 
-    def detect_ball_from_frame(self, frame, frame_count, is_draw=True):
-        # resize the frame, blur it, and convert it to the HSV color space
-        frame = imutils.resize(frame, width=800)
-        # frame = cv2.GaussianBlur(frame, (11, 11), 0)
+    def get_img_with_roi(self, frame):
+        """
+        use simple blob to define ROI of an image - regions that potentially contain balls
+        :param frame:
+        :return: an image object with ROI
+        """
 
         image_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -258,51 +265,76 @@ class Video:
         # filter out table background
         mask_table = cv2.inRange(img_with_interesting_area_hsv, table_lower, table_upper)
         mask_table = cv2.bitwise_not(mask_table)
-        img_with_interesting_area = cv2.bitwise_and(img_with_interesting_area, img_with_interesting_area, mask=mask_table)
+        img_with_interesting_area = cv2.bitwise_and(img_with_interesting_area, img_with_interesting_area,
+                                                    mask=mask_table)
         # cv2.imshow("img_with_interesting_area (filter out table background)", img_with_interesting_area)
         # cv2.waitKey(0)
-        img_with_interesting_area_hsv = cv2.cvtColor(img_with_interesting_area, cv2.COLOR_BGR2HSV)
+        return img_with_interesting_area
+
+    def detect_one_ball_from_img_with_roi(self, ball_id, img_with_roi):
+        """
+        use color range to find ball
+        :param ball_id:
+        :param img_with_roi:
+        :return:
+        """
+
+        # print("ball_id", ball_id)
+        img_with_roi_hsv = cv2.cvtColor(img_with_roi, cv2.COLOR_BGR2HSV)
 
         """
-        detect balls using ball color range
+        apply ball color range on interesting area
+        """
+        ball_color_lower = np.array(self.balls[ball_id].hsv_color_lower, dtype="uint8")
+        ball_color_upper = np.array(self.balls[ball_id].hsv_color_upper, dtype="uint8")
+        mask_range = cv2.inRange(img_with_roi_hsv, ball_color_lower, ball_color_upper)
+        mask_range = cv2.erode(mask_range, None, iterations=2)
+        mask_range = cv2.dilate(mask_range, None, iterations=2)
+
+        # # only display specific ball
+        # image_with_ball = cv2.bitwise_and(img_with_roi, img_with_roi,
+        #                                 mask=mask_range)
+        # cv2.imshow(ball_id, image_with_ball)
+        # cv2.waitKey(0)
+
+        """
+        find cnts
+        """
+        cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        if len(cnts) <= 0:
+            return None
+
+        # print("ball", ball_id, "found!")
+        c = max(cnts, key=cv2.contourArea)
+        ((x, y), radius) = cv2.minEnclosingCircle(c)
+        M = cv2.moments(c)
+
+        ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+        return ball_center
+
+    def detect_all_balls_from_frame(self, frame, frame_count, is_draw=True):
+        if self.resize:
+            # resize the frame, blur it, and convert it to the HSV color space
+            frame = imutils.resize(frame, width=800)
+        # frame = cv2.GaussianBlur(frame, (11, 11), 0)
+
+        img_with_roi = self.get_img_with_roi(frame)
+        # cv2.imshow("img_with_interesting_area (filter out table background)", img_with_interesting_area)
+        # cv2.waitKey(0)
+
+        """
+        detect each ball using ball color range
         """
         for ball_id in self.balls:
-            # print("ball_id", ball_id)
+            ball_center = self.detect_one_ball_from_img_with_roi(ball_id, img_with_roi)
 
-            """
-            apply ball color range on interesting area
-            """
-            ball_color_lower = np.array(self.balls[ball_id].hsv_color_lower, dtype="uint8")
-            ball_color_upper = np.array(self.balls[ball_id].hsv_color_upper, dtype="uint8")
-            mask_range = cv2.inRange(img_with_interesting_area_hsv, ball_color_lower, ball_color_upper)
-            mask_range = cv2.erode(mask_range, None, iterations=2)
-            mask_range = cv2.dilate(mask_range, None, iterations=2)
+            if ball_center:
+                self.tmp_ball_tracking_rec_for_trajectory[ball_id].appendleft(tuple(ball_center))
+                self.ball_tracking_rec_complete[ball_id].append(tuple(ball_center))
+            else:
+                print("ball {} not found on frame {}!".format(ball_id, frame_count))
+                self.ball_tracking_rec_complete[ball_id].append(None)
 
-            # only display specific ball
-            image_with_ball = cv2.bitwise_and(img_with_interesting_area, img_with_interesting_area,
-                                              mask=mask_range)
-            # cv2.imshow(ball_id, image_with_ball)
-            # cv2.waitKey(0)
-
-            """
-            find cnts
-            """
-            cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
-            if len(cnts) <= 0:
-                # print("ball", ball_id, "not found!")
-                print("ball {} not found on frame {} !".format(ball_id, frame_count))
-                # self.ball_tracking_rec_for_real_time[ball_id].append(None) # no need
-                self.ball_tracking_rec_for_sim[ball_id].append(None)
-                continue
-
-            # print("ball", ball_id, "found!")
-            c = max(cnts, key=cv2.contourArea)
-            ((x, y), radius) = cv2.minEnclosingCircle(c)
-            M = cv2.moments(c)
-
-            ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-            self.ball_tracking_rec_for_real_time[ball_id].appendleft(tuple(ball_center))
-            self.ball_tracking_rec_for_sim[ball_id].append(tuple(ball_center))
 
             """
             draw balls and trajectory
@@ -312,7 +344,7 @@ class Video:
                 cv2.circle(frame, ball_center, 10, (0, 0, 255), 2)
 
                 # trajectory
-                tmp_ball_record = self.ball_tracking_rec_for_real_time[ball_id]
+                tmp_ball_record = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
                 # print(tmp_ball_record)
                 for i in range(1, len(tmp_ball_record)):
                     if tmp_ball_record[i - 1] is None or tmp_ball_record[i] is None:
@@ -350,7 +382,7 @@ class Video:
             if self.video_file and not grabbed:
                 break
 
-            self.detect_ball_from_frame(frame,frame_count)
+            self.detect_all_balls_from_frame(frame, frame_count)
             # print(self.ball_tracking_rec_for_real_time)
 
             key = cv2.waitKey(1) & 0xFF
@@ -364,8 +396,8 @@ class Video:
     def draw_simple_trajectory(self):
         img = self.first_frame
 
-        for ball_id in self.ball_tracking_rec_for_sim:
-            one_ball_rec = self.ball_tracking_rec_for_sim[ball_id]
+        for ball_id in self.ball_tracking_rec_complete:
+            one_ball_rec = self.ball_tracking_rec_complete[ball_id]
             one_ball_rec = [x for x in one_ball_rec if x is not None]
 
             for i in range(len(one_ball_rec) - 1):

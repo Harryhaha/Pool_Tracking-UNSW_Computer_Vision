@@ -16,7 +16,7 @@ if __name__ == '__main__':
     H = projection.create_homography(my_video1.table.table_corners, my_sim.sim_table.table_corners)
     print(H)
 
-    sim_tracking_ball_dic = projection.gen_tracking_ball_dic_from_video(my_video1.ball_tracking_rec_for_sim,H)
+    sim_tracking_ball_dic = projection.gen_tracking_ball_dic_from_video(my_video1.ball_tracking_rec_complete, H)
     # print(sim_tracking_ball_dic)
 
     my_sim.set_tracking_ball_dic(sim_tracking_ball_dic)
