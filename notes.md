@@ -33,3 +33,9 @@ used to identify the balls, can in this way also be used in the detection proces
 more robust detection because that a correctly identified ball implies a correct detection.
 The advantage of the latter is that the identification can compare the detected regions against
 each other, and thereby use this knowledge to, e.g. not include two of the same balls.
+
+## issue
+ball 0 not found on frame 41!
+ball 0 not found on frame 57!
+ball 0 not found on frame 58!
+ball 0 not found on frame 69!

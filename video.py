@@ -312,34 +312,51 @@ class Video:
         ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
         return ball_center
 
-    def detect_all_balls_from_frame(self, frame, frame_count, is_draw=True):
-        if self.resize:
-            # resize the frame, blur it, and convert it to the HSV color space
-            frame = imutils.resize(frame, width=800)
-        # frame = cv2.GaussianBlur(frame, (11, 11), 0)
+    def real_time_tracking(self):
+        camera = cv2.VideoCapture(self.video_file)
+        fps = camera.get(cv2.CAP_PROP_FPS)
+        print("Frames per second using camera.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
+        frame_count = 0
 
-        img_with_roi = self.get_img_with_roi(frame)
-        # cv2.imshow("img_with_interesting_area (filter out table background)", img_with_interesting_area)
-        # cv2.waitKey(0)
+        while True:
+            frame_count += 1
 
-        """
-        detect each ball using ball color range
-        """
-        for ball_id in self.balls:
-            ball_center = self.detect_one_ball_from_img_with_roi(ball_id, img_with_roi)
+            # grab the current frame
+            (grabbed, frame) = camera.read()
 
-            if ball_center:
-                self.tmp_ball_tracking_rec_for_trajectory[ball_id].appendleft(tuple(ball_center))
-                self.ball_tracking_rec_complete[ball_id].append(tuple(ball_center))
-            else:
-                print("ball {} not found on frame {}!".format(ball_id, frame_count))
-                self.ball_tracking_rec_complete[ball_id].append(None)
+            # if we are viewing a video and we did not grab a frame,
+            # then we have reached the end of the video
+            if self.video_file and not grabbed:
+                break
 
+            if self.resize:
+                # resize the frame, blur it, and convert it to the HSV color space
+                frame = imutils.resize(frame, width=800)
+            # frame = cv2.GaussianBlur(frame, (11, 11), 0)
 
             """
-            draw balls and trajectory
+            detect ROI
             """
-            if is_draw:
+            img_with_roi = self.get_img_with_roi(frame)
+            # cv2.imshow("img_with_interesting_area (filter out table background)", img_with_interesting_area)
+            # cv2.waitKey(0)
+
+            """
+            detect each ball using ball color range
+            """
+            for ball_id in self.balls:
+                ball_center = self.detect_one_ball_from_img_with_roi(ball_id, img_with_roi)
+
+                if ball_center:
+                    self.tmp_ball_tracking_rec_for_trajectory[ball_id].appendleft(tuple(ball_center))
+                    self.ball_tracking_rec_complete[ball_id].append(tuple(ball_center))
+                else:
+                    print("ball {} not found on frame {}!".format(ball_id, frame_count))
+                    self.ball_tracking_rec_complete[ball_id].append(None)
+
+                """
+                draw balls and trajectory
+                """
                 # cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 0), 2)
                 cv2.circle(frame, ball_center, 10, (0, 0, 255), 2)
 
@@ -360,29 +377,13 @@ class Video:
 
                     cv2.line(frame, tmp_ball_record[i - 1], tmp_ball_record[i], (255, 255, 255), thickness)
 
-        """
-        after check every ball, show processed frame
-        """
-        # print("tracking record:", self.ball_tracking_rec_for_real_time)
+            """
+            after check every ball, show processed frame
+            """
+            # print("tracking record:", self.ball_tracking_rec_for_real_time)
 
-        # show the frame to our screen
-        cv2.imshow("Pool ball tracking frame", frame)
-
-    def real_time_tracking(self):
-        camera = cv2.VideoCapture(self.video_file)
-        frame_count = 0
-        while True:
-            frame_count += 1
-
-            # grab the current frame
-            (grabbed, frame) = camera.read()
-
-            # if we are viewing a video and we did not grab a frame,
-            # then we have reached the end of the video
-            if self.video_file and not grabbed:
-                break
-
-            self.detect_all_balls_from_frame(frame, frame_count)
+            # show the frame to our screen
+            cv2.imshow("Pool ball tracking frame", frame)
             # print(self.ball_tracking_rec_for_real_time)
 
             key = cv2.waitKey(1) & 0xFF
@@ -411,6 +412,57 @@ class Video:
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
+    def test_meanshift(self):
+        camera = cv2.VideoCapture(self.video_file)
+
+        fps = camera.get(cv2.CAP_PROP_FPS)
+        print ("Frames per second using camera.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
+
+        frame_count = 0
+
+        # first frame to determine the original ball (ball 0) and it's tracking window
+        (grabbed, frame) = camera.read()
+        if self.resize:
+            frame = imutils.resize(frame, width=800)
+
+        img_with_roi = self.get_img_with_roi(frame)
+        ball_center = self.detect_one_ball_from_img_with_roi("0",img_with_roi)
+        print(ball_center)
+        c, r, w, h = ball_center[0]-10, ball_center[1]-10, 20, 20  # rectangle of ball area
+        track_window = (c, r, w, h)
+
+        cv2.rectangle(frame, (c, r), (c + w, r + h), 255, 2)
+        cv2.imshow('test', frame)
+        cv2.waitKey(0)
+
+        # Create mask and normalized histogram
+        roi = frame[r:r + h, c:c + w]
+        hsv_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+        ball_color_lower = np.array(self.balls["0"].hsv_color_lower, dtype="uint8")
+        ball_color_upper = np.array(self.balls["0"].hsv_color_upper, dtype="uint8")
+
+        mask = cv2.inRange(hsv_roi, ball_color_lower, ball_color_upper)
+        roi_hist = cv2.calcHist([hsv_roi], [0], mask, [255], [0, 255])
+        cv2.normalize(roi_hist, roi_hist, 0, 255, cv2.NORM_MINMAX)
+        term_crit = (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 80, 1)
+
+        # process each frame
+        while True:
+            ret, frame = camera.read()
+            if self.resize:
+                frame = imutils.resize(frame, width=800)
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            dst = cv2.calcBackProject([hsv], [0], roi_hist, [0, 255], 1)
+            ret, track_window = cv2.meanShift(dst, track_window, term_crit)
+            x, y, w, h = track_window
+            cv2.rectangle(frame, (x, y), (x + w, y + h), 255, 2)
+
+            cv2.imshow('Tracking', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+        camera.release()
+        cv2.destroyAllWindows()
 
 if __name__ == '__main__':
     # video_table = VideoTable("test_data/check0.png")
@@ -419,7 +471,8 @@ if __name__ == '__main__':
     video_file = "test_data/game1/video/1.mp4"
 
     myvideo1 = Video(video_file)
-    myvideo1.real_time_tracking()
+    # myvideo1.real_time_tracking()
+    myvideo1.test_meanshift()
 
 
 
