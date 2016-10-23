@@ -395,8 +395,8 @@ class Video:
             #     continue
 
             # # debug
-            # if self.frame_count == 76:
-            #     cv2.imwrite("frame76.png", frame)
+            # if self.frame_count == 100:
+            #     cv2.imwrite("frame100.png", frame)
 
             # if we are viewing a video and we did not grab a frame,
             # then we have reached the end of the video
@@ -423,6 +423,10 @@ class Video:
 
                 ball_center = self.detect_one_ball_from_img_with_roi_v1(ball_id, img_with_roi)
 
+                # if self.frame_count == 100 and ball_id == "8":
+                #     print("hello!!!!!!")
+                #     print(ball_center)
+
                 if ball_center:
                     self.tmp_ball_tracking_rec_for_trajectory[ball_id].appendleft(tuple(ball_center))
                     self.ball_tracking_rec_complete[ball_id].append(tuple(ball_center))
@@ -436,25 +440,26 @@ class Video:
                 """
                 draw balls and trajectory
                 """
-                # cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 0), 2)
-                cv2.circle(frame, ball_center, config.video_ball_radius, self.balls[ball_id].trajectory_color, 2)
+                if ball_center:
+                    # cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 0), 2)
+                    cv2.circle(frame, ball_center, config.video_ball_radius, self.balls[ball_id].trajectory_color, 2)
 
-                # trajectory
-                tmp_ball_record = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
-                # print(tmp_ball_record)
-                for i in range(1, len(tmp_ball_record)):
-                    if tmp_ball_record[i - 1] is None or tmp_ball_record[i] is None:
-                        # print("Doesn't draw the line for current frame!")
-                        continue
+                    # trajectory
+                    tmp_ball_record = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
+                    # print(tmp_ball_record)
+                    for i in range(1, len(tmp_ball_record)):
+                        if tmp_ball_record[i - 1] is None or tmp_ball_record[i] is None:
+                            # print("Doesn't draw the line for current frame!")
+                            continue
 
-                    # thickness = int(np.sqrt(64 / float(i + 1)) * 2.5)
-                    thickness = int(np.sqrt(64 / float(i + 1)) * 1.2)
+                        # thickness = int(np.sqrt(64 / float(i + 1)) * 2.5)
+                        thickness = int(np.sqrt(64 / float(i + 1)) * 1.2)
 
-                    # print(thickness)
-                    # print(tmp_ball_record[i - 1])
-                    # print(tmp_ball_record[i])
+                        # print(thickness)
+                        # print(tmp_ball_record[i - 1])
+                        # print(tmp_ball_record[i])
 
-                    cv2.line(frame, tmp_ball_record[i - 1], tmp_ball_record[i], self.balls[ball_id].trajectory_color, thickness)
+                        cv2.line(frame, tmp_ball_record[i - 1], tmp_ball_record[i], self.balls[ball_id].trajectory_color, thickness)
 
             """
             after check every ball, show processed frame
@@ -708,8 +713,9 @@ if __name__ == '__main__':
     # cv2.destroyAllWindows()
 
     # test2
-    # img = cv2.imread("test_data/game1/frame76.png")
-    img = cv2.imread("test_data/game1/balls/all_balls.png")
+    img = cv2.imread("test_data/game1/frame100.png")
+    img = imutils.resize(img, width=800)
+    # img = cv2.imread("test_data/game1/balls/all_balls.png")
     # img = cv2.imread("img_with_roi76.png")
     roi = myvideo1.get_img_with_roi(img)
     cv2.imshow("roi", roi)
@@ -718,15 +724,15 @@ if __name__ == '__main__':
 
     img_with_roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
 
-    ball_color_lower = np.array(myvideo1.balls["4"].hsv_color_lower, dtype="uint8")
-    ball_color_upper = np.array(myvideo1.balls["4"].hsv_color_upper, dtype="uint8")
+    ball_color_lower = np.array(myvideo1.balls["8"].hsv_color_lower, dtype="uint8")
+    ball_color_upper = np.array(myvideo1.balls["8"].hsv_color_upper, dtype="uint8")
     mask_range = cv2.inRange(img_with_roi_hsv, ball_color_lower, ball_color_upper)
 
     mask_range = cv2.erode(mask_range, None, iterations=1)
     mask_range = cv2.dilate(mask_range, None, iterations=1)
 
     image_with_ball = cv2.bitwise_and(roi, roi, mask=mask_range)
-    cv2.imshow("4", image_with_ball)
+    cv2.imshow("8", image_with_ball)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 

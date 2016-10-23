@@ -79,15 +79,24 @@ class Sim:
             img = init_img.copy()
 
             for ball_id in self.tracking_ball_dic:
-                try:
-                    ball_position = self.tracking_ball_dic[ball_id][frame_index]
-                    cv2.circle(img, ball_position, config.sim_ball_radius, self.sim_balls[ball_id].ball_color, -1)
-                    # video.write(img)
 
-                    successful_frame_count += 1
-                    # print(successful_frame_count)
-                except:
-                    pass
+                ball_position = self.tracking_ball_dic[ball_id][frame_index]
+
+                # ball position unknown for this frame
+                if not ball_position:
+                    continue
+
+                cv2.circle(img, ball_position, config.sim_ball_radius, self.sim_balls[ball_id].ball_color, -1)
+                # striped ball
+                if int(ball_id) >= 9:
+                    pt1 = (int(ball_position[0]-config.sim_ball_radius+2), int(ball_position[1]))
+                    pt2 = (int(ball_position[0]+config.sim_ball_radius-2), int(ball_position[1]))
+                    cv2.line(img, pt1, pt2, (255,255,255),5)
+
+                # video.write(img)
+                successful_frame_count += 1
+                # print(successful_frame_count)
+
 
             cv2.imshow('frame', img)
             if cv2.waitKey(100) & 0xFF == ord('q'):

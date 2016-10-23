@@ -38,6 +38,16 @@ balls_data = {
         {"hsv_color_lower": (12, 130, 130),
          "hsv_color_upper": (25, 200, 200),
          "trajectory_color": (66, 129, 175)
+         },
+    "8":
+        {"hsv_color_lower": (0, 50, 0),
+         "hsv_color_upper": (255, 255, 50),
+         "trajectory_color": (0, 0, 0)
+         },
+    "9":
+        {"hsv_color_lower": (10, 100, 220),
+         "hsv_color_upper": (28, 185, 255),
+         "trajectory_color": (73, 178, 243)
          }
 }
 
@@ -55,7 +65,11 @@ sim_ball_data = {
     "6":
         {"ball_color": (55, 58, 13), "ball_image": None},
     "7":
-        {"ball_color": (66, 129, 175), "ball_image": None}
+        {"ball_color": (66, 129, 175), "ball_image": None},
+    "8":
+        {"ball_color": (0, 0, 0), "ball_image": None},
+    "9":
+        {"ball_color": (73, 178, 243), "ball_image": None}
 }
 
 first_frame_save_path = "test_data/first_frame.png"
