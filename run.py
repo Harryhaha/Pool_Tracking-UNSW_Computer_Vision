@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     video_file = "test_data/game1/video/1.mp4"
 
-    my_video1 = Video(video_file, resize=False)
+    my_video1 = Video(video_file, resize=True)
     my_video1.real_time_tracking()
     my_video1.draw_simple_trajectory()
 

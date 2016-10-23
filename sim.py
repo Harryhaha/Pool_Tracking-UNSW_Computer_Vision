@@ -89,11 +89,11 @@ class Sim:
                 except:
                     pass
 
-                cv2.imshow('frame', img)
-                if cv2.waitKey(100) & 0xFF == ord('q'):
-                    break
+            cv2.imshow('frame', img)
+            if cv2.waitKey(100) & 0xFF == ord('q'):
+                break
 
-                frame_index += 1
+            frame_index += 1
 
             # img_title = "animation-frame:" + str(frame_index)
             # cv2.imshow(img_title, img)

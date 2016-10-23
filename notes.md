@@ -3,7 +3,7 @@ FindChessboardCorners
 https://www.reddit.com/r/computervision/comments/29t7bp/cvchess_automatically_inferring_chess_moves_from/
 
 
-python ballDetect.py --image pokemon_games.png
+python3 colorAnalyze.py -i test_data/game1/balls/ball2.png
 
 ## detect red ball:
 https://solarianprogrammer.com/2015/05/08/detect-red-circles-image-using-opencv/
@@ -58,3 +58,22 @@ cv2.waitKey(0)
 mask_roi = np.zeros((frame.shape[0], frame.shape[1]), dtype=frame.dtype)
                     cv2.circle(mask_roi, (x, y), radius, 1, thickness=-1)
 ~~~
+
+## issue
+balls_data = {
+    "0":
+        {"hsv_color_lower": (0, 0, 100),
+         "hsv_color_upper": (40, 80, 255),
+         "trajectory_color": (255, 255, 255)
+         },
+    "3":
+        {"hsv_color_lower": (5,170,170),
+         "hsv_color_upper": (20,255,255),
+         "trajectory_color": (134, 0, 252)
+         },
+    "2":
+        {"hsv_color_lower": (99, 30, 50),
+         "hsv_color_upper": (119, 200, 150),
+         "trajectory_color": (112, 77, 49)
+         }
+}

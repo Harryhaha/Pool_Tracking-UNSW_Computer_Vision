@@ -15,8 +15,8 @@ balls_data = {
          "trajectory_color": (134, 0, 252)
          },
     "2":
-        {"hsv_color_lower": (90, 30, 50),
-         "hsv_color_upper": (130, 255, 255),
+        {"hsv_color_lower": (99, 0, 50),
+         "hsv_color_upper": (119, 255, 150),
          "trajectory_color": (112, 77, 49)
          }
 }
