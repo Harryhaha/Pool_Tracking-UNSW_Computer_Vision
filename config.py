@@ -5,19 +5,39 @@ video_table_data = {
 
 balls_data = {
     "0":
-        {"hsv_color_lower": (0, 0, 100),
+        {"hsv_color_lower": (0, 10, 100),
          "hsv_color_upper": (40, 80, 255),
          "trajectory_color": (255, 255, 255)
          },
-    "3":
-        {"hsv_color_lower": (5,170,170),
-         "hsv_color_upper": (20,255,255),
-         "trajectory_color": (134, 0, 252)
-         },
     "2":
-        {"hsv_color_lower": (99, 0, 50),
+        {"hsv_color_lower": (99, 10, 50),
          "hsv_color_upper": (119, 255, 150),
          "trajectory_color": (112, 77, 49)
+         },
+    "3":
+        {"hsv_color_lower": (3,150,150),
+         "hsv_color_upper": (15,230,255),
+         "trajectory_color": (56, 144, 249)
+         },
+    "4":
+        {"hsv_color_lower": (0, 100, 150),
+         "hsv_color_upper": (15, 190, 255),
+         "trajectory_color": (254, 102, 255)
+         },
+    "5":
+        {"hsv_color_lower": (0, 130, 150),
+         "hsv_color_upper": (12, 255, 255),
+         "trajectory_color": (37, 61, 231)
+         },
+    "6":
+        {"hsv_color_lower": (80, 10, 10),
+         "hsv_color_upper": (98, 255, 255),
+         "trajectory_color": (55, 58, 13)
+         },
+    "7":
+        {"hsv_color_lower": (12, 130, 130),
+         "hsv_color_upper": (25, 200, 200),
+         "trajectory_color": (66, 129, 175)
          }
 }
 
@@ -25,9 +45,17 @@ sim_ball_data = {
     "0":
         {"ball_color": (255, 255, 255), "ball_image": None},
     "3":
-        {"ball_color": (134, 0, 252), "ball_image": None},
+        {"ball_color": (56, 144, 249), "ball_image": None},
     "2":
-        {"ball_color": (112, 77, 49), "ball_image": None}
+        {"ball_color": (112, 77, 49), "ball_image": None},
+    "4":
+        {"ball_color": (254, 102, 255), "ball_image": None},
+    "5":
+        {"ball_color": (37, 61, 231), "ball_image": None},
+    "6":
+        {"ball_color": (55, 58, 13), "ball_image": None},
+    "7":
+        {"ball_color": (66, 129, 175), "ball_image": None}
 }
 
 first_frame_save_path = "test_data/first_frame.png"

@@ -2,9 +2,6 @@
 FindChessboardCorners
 https://www.reddit.com/r/computervision/comments/29t7bp/cvchess_automatically_inferring_chess_moves_from/
 
-
-python3 colorAnalyze.py -i test_data/game1/balls/ball2.png
-
 ## detect red ball:
 https://solarianprogrammer.com/2015/05/08/detect-red-circles-image-using-opencv/
 there are two range
@@ -67,13 +64,34 @@ balls_data = {
          "trajectory_color": (255, 255, 255)
          },
     "3":
-        {"hsv_color_lower": (5,170,170),
-         "hsv_color_upper": (20,255,255),
-         "trajectory_color": (134, 0, 252)
+        {"hsv_color_lower": (3,150,150),
+         "hsv_color_upper": (15,230,255),
+         "trajectory_color": (56, 144, 249)
          },
     "2":
-        {"hsv_color_lower": (99, 30, 50),
-         "hsv_color_upper": (119, 200, 150),
+        {"hsv_color_lower": (99, 0, 50),
+         "hsv_color_upper": (119, 255, 150),
          "trajectory_color": (112, 77, 49)
-         }
+         },
+    "5":
+        {"hsv_color_lower": (0, 130, 150),
+         "hsv_color_upper": (12, 255, 255),
+         "trajectory_color": (37, 61, 231)
+         },
+    "6":
+        {"hsv_color_lower": (80, 0, 0),
+         "hsv_color_upper": (98, 255, 255),
+         "trajectory_color": (55, 58, 13)
+         },
+    # "7":
+    #     {"hsv_color_lower": (8, 80, 0),
+    #      "hsv_color_upper": (28, 255, 255),
+    #      "trajectory_color": (66, 129, 175)
+    #      }
 }
+
+    "7":
+        {"hsv_color_lower": (12, 75, 100),
+         "hsv_color_upper": (22, 185, 255),
+         "trajectory_color": (66, 129, 175)
+         } ->9

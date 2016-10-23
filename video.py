@@ -308,8 +308,8 @@ class Video:
         ball_color_lower = np.array(self.balls[ball_id].hsv_color_lower, dtype="uint8")
         ball_color_upper = np.array(self.balls[ball_id].hsv_color_upper, dtype="uint8")
         mask_range = cv2.inRange(img_with_roi_hsv, ball_color_lower, ball_color_upper)
-        mask_range = cv2.erode(mask_range, None, iterations=2)
-        mask_range = cv2.dilate(mask_range, None, iterations=2)
+        mask_range = cv2.erode(mask_range, None, iterations=1)
+        mask_range = cv2.dilate(mask_range, None, iterations=1)
 
         if debug:
             # only display specific ball
@@ -319,10 +319,10 @@ class Video:
             cv2.destroyAllWindows()
 
         # # debug
-        # if self.frame_count == 105:
-        #     cv2.imwrite("frame82.png", img_with_roi)
+        # if self.frame_count == 76:
+        #     cv2.imwrite("img_with_roi76.png", img_with_roi)
         #     image_with_ball = cv2.bitwise_and(img_with_roi, img_with_roi, mask=mask_range)
-        #     cv2.imwrite("frame82_1.png", image_with_ball)
+        #     cv2.imwrite("image_with_ball76.png", image_with_ball)
 
         """
         find cnts, then ball center.
@@ -394,6 +394,10 @@ class Video:
             # if self.frame_count < 200:
             #     continue
 
+            # # debug
+            # if self.frame_count == 76:
+            #     cv2.imwrite("frame76.png", frame)
+
             # if we are viewing a video and we did not grab a frame,
             # then we have reached the end of the video
             if self.video_file and not grabbed:
@@ -403,6 +407,7 @@ class Video:
                 # resize the frame, blur it, and convert it to the HSV color space
                 frame = imutils.resize(frame, width=800)
             # frame = cv2.GaussianBlur(frame, (11, 11), 0)
+            # frame = cv2.medianBlur(frame, 3)
 
             """
             detect ROI
@@ -415,6 +420,7 @@ class Video:
             detect each ball using ball color range
             """
             for ball_id in self.balls:
+
                 ball_center = self.detect_one_ball_from_img_with_roi_v1(ball_id, img_with_roi)
 
                 if ball_center:
@@ -431,7 +437,7 @@ class Video:
                 draw balls and trajectory
                 """
                 # cv2.circle(frame, (int(x), int(y)), int(radius), (0, 0, 0), 2)
-                cv2.circle(frame, ball_center, config.video_ball_radius, (0, 0, 255), 2)
+                cv2.circle(frame, ball_center, config.video_ball_radius, self.balls[ball_id].trajectory_color, 2)
 
                 # trajectory
                 tmp_ball_record = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
@@ -448,7 +454,7 @@ class Video:
                     # print(tmp_ball_record[i - 1])
                     # print(tmp_ball_record[i])
 
-                    cv2.line(frame, tmp_ball_record[i - 1], tmp_ball_record[i], (255, 255, 255), thickness)
+                    cv2.line(frame, tmp_ball_record[i - 1], tmp_ball_record[i], self.balls[ball_id].trajectory_color, thickness)
 
             """
             after check every ball, show processed frame
@@ -702,9 +708,30 @@ if __name__ == '__main__':
     # cv2.destroyAllWindows()
 
     # test2
-    img = cv2.imread("test_data/game1/4.png")
+    # img = cv2.imread("test_data/game1/frame76.png")
+    img = cv2.imread("test_data/game1/balls/all_balls.png")
+    # img = cv2.imread("img_with_roi76.png")
     roi = myvideo1.get_img_with_roi(img)
     cv2.imshow("roi", roi)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    myvideo1.detect_one_ball_from_img_with_roi_v2("2", roi, debug=True)
+
+    img_with_roi_hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+
+    ball_color_lower = np.array(myvideo1.balls["4"].hsv_color_lower, dtype="uint8")
+    ball_color_upper = np.array(myvideo1.balls["4"].hsv_color_upper, dtype="uint8")
+    mask_range = cv2.inRange(img_with_roi_hsv, ball_color_lower, ball_color_upper)
+
+    mask_range = cv2.erode(mask_range, None, iterations=1)
+    mask_range = cv2.dilate(mask_range, None, iterations=1)
+
+    image_with_ball = cv2.bitwise_and(roi, roi, mask=mask_range)
+    cv2.imshow("4", image_with_ball)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+    print(len(cnts))
+
+    # ball_center = myvideo1.detect_one_ball_from_img_with_roi_v1("7", roi, debug=True)
+    # print(ball_center)
