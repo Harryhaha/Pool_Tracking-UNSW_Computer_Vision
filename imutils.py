@@ -69,3 +69,22 @@ def get_distance_of_two_points(p1,p2):
     :return:
     """
     return math.hypot(p1[0] - p2[0], p1[1] - p2[1])
+
+
+def is_point_within_radius_of_point_list(p0, point_list, radius):
+    for p in point_list:
+        if get_distance_of_two_points(p0, p)<radius:
+            return True
+
+    return False
+
+
+def remove_array(L,arr):
+    ind = 0
+    size = len(L)
+    while ind != size and not np.array_equal(L[ind],arr):
+        ind += 1
+    if ind != size:
+        L.pop(ind)
+    else:
+        raise ValueError('array not found in list.')

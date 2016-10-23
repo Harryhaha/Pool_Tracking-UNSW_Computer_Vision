@@ -66,8 +66,8 @@ class Sim:
         init_img = cv2.imread(self.sim_table.table_img_path)
         height, width, channels = init_img.shape
 
-        fourcc = cv2.VideoWriter_fourcc(*'XVID')
-        video = cv2.VideoWriter('anim.avi', fourcc=fourcc, fps=fps, frameSize=(height, width))
+        # fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        # video = cv2.VideoWriter('anim.avi', fourcc=fourcc, fps=fps, frameSize=(height, width))
 
         frame_index = 0
         successful_frame_count = 0
@@ -81,10 +81,10 @@ class Sim:
             for ball_id in self.tracking_ball_dic:
                 try:
                     ball_position = self.tracking_ball_dic[ball_id][frame_index]
-                    cv2.circle(img, ball_position, 8, self.sim_balls[ball_id].ball_color, -1)
-                    video.write(img)
+                    cv2.circle(img, ball_position, config.sim_ball_radius, self.sim_balls[ball_id].ball_color, -1)
+                    # video.write(img)
 
-                    successful_frame_count+=1
+                    successful_frame_count += 1
                     # print(successful_frame_count)
                 except:
                     pass
@@ -105,7 +105,7 @@ class Sim:
 
 
         cv2.destroyAllWindows()
-        video.release()
+        # video.release()
 
         # camera = cv2.VideoCapture('anim.avi')
         #

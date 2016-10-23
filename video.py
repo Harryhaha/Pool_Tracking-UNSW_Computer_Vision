@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import math
 from collections import deque, defaultdict
 
 import imutils
@@ -16,8 +17,8 @@ class VideoTable:
         self.table_img_path = img_path
 
         # define the pool table color range
-        self.hsv_color_lower = np.array([95, 100, 0], dtype="uint8")
-        self.hsv_color_upper = np.array([105, 255, 255], dtype="uint8")
+        self.hsv_color_lower = np.array(config.video_table_data["hsv_color_lower"], dtype="uint8")
+        self.hsv_color_upper = np.array(config.video_table_data["hsv_color_upper"], dtype="uint8")
 
         self.table_corners = np.empty([4, 2], dtype="float32")  # order: Left-Down, Left-Top, Right-Top, Right-Down
         self.click_count = 0
@@ -219,13 +220,7 @@ class Video:
             self.tmp_ball_tracking_rec_for_trajectory[ball_id] = deque(maxlen=64)
             self.ball_tracking_rec_complete[ball_id] = []
 
-    def get_img_with_roi(self, frame):
-        """
-        use simple blob to define ROI of an image - regions that potentially contain balls
-        :param frame:
-        :return: an image object with ROI
-        """
-
+    def get_keypoints_blob(self, frame):
         # frame = cv2.GaussianBlur(frame, (11, 11), 0)
 
         image_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -253,6 +248,17 @@ class Video:
         detector = cv2.SimpleBlobDetector_create(params)  # Initialize configured blob detector
         keypoints = detector.detect(image_with_table_area)
 
+        return keypoints
+
+    def get_img_with_roi(self, frame):
+        """
+        use simple blob to define ROI of an image - regions that potentially contain balls
+        :param frame:
+        :return: an image object with ROI
+        """
+
+        keypoints = self.get_keypoints_blob(frame)
+
         # generate image with interesting area (areas which might have balls in it.)
         interesting_mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=frame.dtype)
         for keypoint in keypoints:
@@ -265,6 +271,8 @@ class Video:
         # cv2.waitKey(0)
 
         # filter out table background
+        table_lower = self.table.hsv_color_lower
+        table_upper = self.table.hsv_color_upper
         mask_table = cv2.inRange(img_with_interesting_area_hsv, table_lower, table_upper)
         mask_table = cv2.bitwise_not(mask_table)
         img_with_interesting_area = cv2.bitwise_and(img_with_interesting_area, img_with_interesting_area,
@@ -310,6 +318,7 @@ class Video:
         # print("ball", ball_id, "found!")
         while len(cnts) > 0:
             c = max(cnts, key=cv2.contourArea)
+
             ((x, y), radius) = cv2.minEnclosingCircle(c)
             M = cv2.moments(c)
 
@@ -319,12 +328,99 @@ class Video:
             if len(one_ball_rec) > 0:
                 prev_ball_center = one_ball_rec[0]
                 if imutils.get_distance_of_two_points(ball_center, prev_ball_center) > config.max_move_dis:
-                    cnts.remove(c)
+                    # print("c",c)
+                    # cnts.remove(c)
+                    imutils.remove_array(cnts, c)
                     continue
 
             return ball_center
 
         return None
+
+    def detect_one_ball_from_img_with_roi_v2(self, ball_id, img_with_roi):
+        """
+        use color range to find ball
+        :param ball_id:
+        :param img_with_roi:
+        :return:
+        """
+
+        # print("ball_id", ball_id)
+        img_with_roi_hsv = cv2.cvtColor(img_with_roi, cv2.COLOR_BGR2HSV)
+
+        """
+        apply ball color range on interesting area
+        """
+        ball_color_lower = np.array(self.balls[ball_id].hsv_color_lower, dtype="uint8")
+        ball_color_upper = np.array(self.balls[ball_id].hsv_color_upper, dtype="uint8")
+        mask_range = cv2.inRange(img_with_roi_hsv, ball_color_lower, ball_color_upper)
+        mask_range = cv2.erode(mask_range, None, iterations=2)
+        mask_range = cv2.dilate(mask_range, None, iterations=2)
+
+        # # only display specific ball
+        # image_with_ball = cv2.bitwise_and(img_with_roi, img_with_roi,
+        #                                 mask=mask_range)
+        # cv2.imshow(ball_id, image_with_ball)
+        # cv2.waitKey(0)
+
+        """
+        find cnts, then ball center.
+        pick up the nearest-max one to previous ball center
+        """
+        cnts = cv2.findContours(mask_range.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)[-2]
+        if len(cnts) <= 0:
+            return None
+
+        # print("ball", ball_id, "found!")
+        radius = float("inf")
+        for c in cnts:
+            ((x, y), tmp_radius) = cv2.minEnclosingCircle(c)
+            if tmp_radius < radius:
+                radius = tmp_radius
+
+        min_distance = float("inf")
+        cnt_with_min_distance = None
+        for cnt in cnts:
+            ((x_center, y_center), _) = cv2.minEnclosingCircle(cnt)
+
+            # check if distance is over a limit
+            one_ball_rec = self.tmp_ball_tracking_rec_for_trajectory[ball_id]
+
+            if len(one_ball_rec) > 0:
+                prev_ball_center = one_ball_rec[0]
+                if imutils.get_distance_of_two_points((x_center,y_center), prev_ball_center) > config.max_move_dis:
+                    continue
+
+            sum_color_distance = 0
+            # c->column->x, r->row->y
+            c, r, w, h = int(x_center - radius), int(y_center - radius), int(2*radius), int(2*radius)
+            for y in range(r, r + h):
+                for x in range(c, c + w):
+                    # outside of circle, should not count as ball region pixel
+                    if imutils.get_distance_of_two_points((x, y), (x_center, y_center)) > radius:
+                        continue
+
+                    benchmark_bgr = config.balls_avg_BGR[ball_id]
+                    frame_hsv = img_with_roi_hsv[y,x]
+                    if self.is_table_background_color(frame_hsv):
+                        continue
+
+                    frame_bgr = img_with_roi[y,x]
+                    distance = self._calc_elucidean_dist(frame_bgr, benchmark_bgr)
+                    sum_color_distance += distance
+
+            if sum_color_distance < min_distance:
+                min_distance = sum_color_distance
+                cnt_with_min_distance = cnt
+
+        if cnt_with_min_distance != None:
+            ((x, y), radius) = cv2.minEnclosingCircle(cnt_with_min_distance)
+            M = cv2.moments(cnt_with_min_distance)
+
+            ball_center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+            return ball_center
+        else:
+            return None
 
     def detect_one_ball_from_img_with_roi_v1_simple(self, ball_id, img_with_roi):
         """
@@ -369,7 +465,13 @@ class Video:
 
         return ball_center
 
+    # todo
     def detect_one_ball_by_prev_status(self, ball_id, frame):
+        """
+        :param ball_id:
+        :param frame:
+        :return:
+        """
         pass
 
     def real_time_tracking(self):
@@ -383,6 +485,8 @@ class Video:
 
             # grab the current frame
             (grabbed, frame) = camera.read()
+            if frame_count < 200:
+                continue
 
             # if we are viewing a video and we did not grab a frame,
             # then we have reached the end of the video
@@ -406,7 +510,8 @@ class Video:
             """
             for ball_id in self.balls:
                 # ball_center = self.detect_one_ball_from_img_with_roi_v1_simple(ball_id, img_with_roi)
-                ball_center = self.detect_one_ball_from_img_with_roi(ball_id, img_with_roi)
+                # ball_center = self.detect_one_ball_from_img_with_roi(ball_id, img_with_roi)
+                ball_center = self.detect_one_ball_from_img_with_roi_v2(ball_id, img_with_roi)
 
                 if ball_center:
                     self.tmp_ball_tracking_rec_for_trajectory[ball_id].appendleft(tuple(ball_center))
@@ -530,6 +635,146 @@ class Video:
         camera.release()
         cv2.destroyAllWindows()
 
+    def _calc_elucidean_dist(self, bgr_value, benchmark_rgb_value):
+        dist = 0.0
+        for i in range(3):
+            dist += math.pow(bgr_value[i] - benchmark_rgb_value[i], 2)
+        return dist
+
+
+    #==========================give up===============================
+    # todo
+    def is_table_background_color(self, hsv_val):
+        h, s, v = hsv_val
+        h_lower, h_upper = self.table.hsv_color_lower[0], self.table.hsv_color_upper[0]
+        s_lower, s_upper = self.table.hsv_color_lower[1], self.table.hsv_color_upper[1]
+        v_lower, v_upper = self.table.hsv_color_lower[2], self.table.hsv_color_upper[2]
+
+        if (h in range( h_lower, h_upper)
+            and  s in range( s_lower, s_upper)
+            and v in range( v_lower, v_upper)):
+            return True
+        else:
+            return False
+
+    # todo
+    def analyze_ball_region_color(self, frame, x_center, y_center):
+        # hsv img
+        frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+        # create ball roi window
+        # use ball_radius
+        ball_radius = config.video_ball_radius
+        # c->column->x, r->row->y
+        c, r, w, h = x_center - ball_radius, y_center - ball_radius, ball_radius, ball_radius
+
+        # traverse each point in roi get:
+        # - hue color histogram. (exclude: white, black)
+        # - white count
+        pixel_count = 0
+        hue_val_sum = 0
+        hue_count = 0
+        hue_color_hist = [0] * 180
+        white_pixel_count = 0
+        black_pixel_count = 0
+        for y in range(r, r + h):
+            for x in range(c, c + w):
+                # outside of circle, should not count as ball region pixel
+                if imutils.get_distance_of_two_points((x, y), (x_center, y_center)) > ball_radius:
+                    continue
+
+                pixel_hsv = frame_hsv[y, x]
+                pixel_count += 1
+
+                # check if it's table background pixel
+                if self.is_table_background_color(pixel_hsv):
+                    continue
+
+                # check if it's black pixel
+                if pixel_hsv[2] <= config.black_v_max:
+                    black_pixel_count += 1
+                    continue
+
+                # check if it's white pixel
+                if pixel_hsv[1] <= config.white_s_max:
+                    white_pixel_count += 1
+                    continue
+
+                # count as color pixel.
+                hue_color_hist[pixel_hsv[0]] += 1
+                hue_val_sum += pixel_hsv[0]
+                hue_count += 1
+
+        print("=====")
+        print("center", (x_center, y_center))
+        print("pixel_count", pixel_count)
+        print("white_pixel_count:", white_pixel_count)
+        print("black_pixel_count:", black_pixel_count)
+        print("color_hist:", hue_color_hist)
+        print("hue_count:", hue_count)
+
+        # return {"white_pixel_count:": white_pixel_count,
+        #         "black_pixel_count:": black_pixel_count,
+        #         "color_hist:": hue_color_hist}
+
+        # calc primary color count
+        primary_pixel_count = 0
+        if hue_count > 0:
+            mean_hue = int(hue_val_sum / hue_count)
+            print("mean_hue:", mean_hue)
+            mean_hue_variance = config.mean_hue_variance
+            for hue_val in range(mean_hue-mean_hue_variance, mean_hue+mean_hue_variance):
+                primary_pixel_count += hue_color_hist[hue_val]
+
+        # If the number of black pixels is greater than the number of primary colored pixels,
+        # the number of black pixels is used as the number of primary pixels.
+        if black_pixel_count>primary_pixel_count:
+            primary_pixel_count = black_pixel_count
+
+        ball_pb = (primary_pixel_count + white_pixel_count) / float(pixel_count)
+        print("ball_pb:", ball_pb)
+
+        return ball_pb
+
+
+    # todo
+    def find_ball_candinates(self, frame):
+        ball_candinates_dic = {}
+
+        keypoints = self.get_keypoints_blob(frame=frame)
+        # for each ROI
+        for key_point in keypoints:
+            x_center, y_center, radius = int(key_point.pt[0]), int(key_point.pt[1]),  int(key_point.size / 2)
+
+            # ROI window
+            # c->column->x, r->row->y
+            c, r, w, h = x_center - radius, y_center - radius, radius, radius
+            for y in range(r, r + h):
+                for x in range(c, c + w):
+                    ball_pb = self.analyze_ball_region_color(frame, x, y)
+                    ball_candinates_dic[(x,y)] = ball_pb
+                    # cv2.circle(frame, (x, y), config.video_ball_radius, (255, 0, 0), 2)
+
+        ball_candinates_ordered_list = sorted(ball_candinates_dic.items(), key=lambda d: d[1], reverse=True)
+        print(ball_candinates_ordered_list)
+
+        # cv2.imshow("test", frame)
+
+        return ball_candinates_ordered_list
+
+    # todo
+    def select_balls_from_candinates(self, ball_candinates_ordered_list):
+        final_ball_list = []
+        while len(ball_candinates_ordered_list) != 0 and len(final_ball_list) < 16:
+            leader_ball = ball_candinates_ordered_list.pop(0)[0]
+
+            if imutils.is_point_within_radius_of_point_list(leader_ball, final_ball_list, config.video_ball_radius):
+                continue
+
+            final_ball_list.append(leader_ball)
+
+        return final_ball_list
+
 
 if __name__ == '__main__':
     # video_table = VideoTable("test_data/check0.png")
@@ -539,11 +784,22 @@ if __name__ == '__main__':
 
     myvideo1 = Video(video_file)
 
+    img = cv2.imread("test_data/game1/4.png")
+    ball_list = myvideo1.find_ball_candinates(img)
+    final_ball_list = myvideo1.select_balls_from_candinates(ball_list)
+    print("final_ball_list", final_ball_list)
+
+    for p in final_ball_list:
+        cv2.circle(img, p, config.video_ball_radius, (255,0,0), 2)
+
+    cv2.imshow("effect", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
     # frame = cv2.imread("extra_files/useful_output/not_found_frame/0_not_found_frame_69.png")
     # myvideo1.get_img_with_roi(frame)
 
     # myvideo1.real_time_tracking()
-    myvideo1.test()
 
 
 

@@ -1,2 +1,3 @@
 - [ ] fix issue: when detected cnt center is far away from previous ball point, abandon it. (pick up the nearest one)
 - [ ] try mean shift
+- [ ] check if ball get into pocket

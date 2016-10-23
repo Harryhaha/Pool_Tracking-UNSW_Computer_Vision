@@ -39,3 +39,22 @@ ball 0 not found on frame 41!
 ball 0 not found on frame 57!
 ball 0 not found on frame 58!
 ball 0 not found on frame 69!
+
+## mask
+~~~
+table_lower = self.table.hsv_color_lower
+table_upper = self.table.hsv_color_upper
+
+frame_hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+mask_remove_table = cv2.inRange(frame_hsv, table_lower, table_upper)
+mask_remove_table = cv2.bitwise_not(mask_remove_table)
+
+mask_white = 
+
+test_img = cv2.bitwise_and(frame, frame, mask=mask_remove_table)
+cv2.imshow("masked", test_img)
+cv2.waitKey(0)
+
+mask_roi = np.zeros((frame.shape[0], frame.shape[1]), dtype=frame.dtype)
+                    cv2.circle(mask_roi, (x, y), radius, 1, thickness=-1)
+~~~
