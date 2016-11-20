@@ -31,8 +31,8 @@ class VideoTable:
     def event_table_corner_click(self, event, x, y, flags, param):
         # print("hello")
 
-        # if event == cv2.EVENT_LBUTTONDOWN:
-        if event == cv2.EVENT_LBUTTONDBLCLK:
+        if event == cv2.EVENT_LBUTTONDOWN:
+        # if event == cv2.EVENT_LBUTTONDBLCLK:
             if self.click_count < 4:
                 self.table_corners[self.click_count, :] = [int(x), int(y)]
                 print(x, y)
@@ -205,6 +205,10 @@ class Video:
         # use first frame to detect table
         (grabbed, self.first_frame) = camera.read()
         # cv2.imshow("first frame", self.first_frame)
+
+        print("--------")
+        print(self.first_frame)
+
         if self.resize:
             self.first_frame = imutils.resize(self.first_frame, width=800)
 

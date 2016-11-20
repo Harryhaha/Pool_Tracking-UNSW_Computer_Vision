@@ -72,7 +72,7 @@ sim_ball_data = {
         {"ball_color": (73, 178, 243), "ball_image": None}
 }
 
-first_frame_save_path = "test_data/first_frame.png"
+first_frame_save_path = "first_frame.png"
 
 video_ball_radius = 10
 sim_ball_radius = 10

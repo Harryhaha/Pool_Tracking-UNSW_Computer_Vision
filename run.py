@@ -6,7 +6,7 @@ if __name__ == '__main__':
     # video_table = VideoTable("test_data/check0.png")
     # print(video_table.field_corners)
 
-    video_file = "test_data/game1/video/1.mp4"
+    video_file = "videoFolder/1.mp4"
 
     my_video1 = Video(video_file, resize=True)
     my_video1.real_time_tracking()
